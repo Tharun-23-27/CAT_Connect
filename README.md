@@ -1,4 +1,4 @@
-# 🚜 Caterpillar Equipment Rental Tracking & Operational Intelligence Control Tower
+# 🚜 Caterpillar Equipment Rental Tracking(Frontend)
 
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)

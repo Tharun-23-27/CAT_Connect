@@ -1,6 +1,0 @@
-{
-  "name": "Cat_Connect",
-  "description": "Smart Rental Tracking System frontend for heavy equipment fleet tracking, live telematics, action queue, and check-in/check-out workflows.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

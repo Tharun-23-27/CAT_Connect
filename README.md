@@ -1,4 +1,4 @@
-#  Caterpillar Equipment Rental Tracking
+# 🚜 Caterpillar Equipment Rental Tracking(Frontend)
 
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -11,7 +11,7 @@ An enterprise-grade Fleet Management & Operational Intelligence Control Tower bu
 
 ## 🌟 Key Capabilities & Architectural Highlights
 
-### 1. 🔄 5-Stage Operational Intelligence Pipeline
+### 1. 5-Stage Operational Intelligence Pipeline
 * **Track**: Real-time CAN-bus telematics ingestion (Engine Hours, RPM, Fuel % & DEF, Hydraulic Relief PSI, Battery Voltage, Vibration G-force).
 * **Understand**: Automated anomaly and deviation signal detection:
   - `Signal 1 (Underutilization)`: Zero hours clocked during paid active rental lease.
@@ -21,22 +21,22 @@ An enterprise-grade Fleet Management & Operational Intelligence Control Tower bu
 * **Recommend**: Context-aware AI recommendations for fleet rebalancing, contract extensions, and maintenance triage.
 * **Act**: One-click actionable execution (`REASSIGN`, `EXTEND`, `INVESTIGATE`, `RETURN`, `PRE-POSITION`).
 
-### 2. 📊 Caterpillar Problem Statement Benchmark (`EQX1001`–`EQX1007`)
+### 2. Caterpillar Problem Statement Benchmark (`EQX1001`–`EQX1007`)
 * Built-in toggle between the **Official 7-Asset Benchmark Dataset** and the **Full Multi-Regional Fleet**.
 * Pre-configured test assets evaluating Slide 41 scenarios with real-time simulated telemetry jitter.
 
-### 3. 🗺️ GPS Geospatial Map & Geofence Intelligence
+### 3. GPS Geospatial Map & Geofence Intelligence
 * Live multi-site interactive map with site clusters, radius overlays, and active asset positioning.
 * Real-time geofence violation detection and unauthorized movement alerts.
 
-### 4. 📝 Digital Equipment Check-In / Check-Out Wizard
+### 4. Digital Equipment Check-In / Check-Out Wizard
 * Multi-step inspection workflow:
   - Hour meter & fuel / DEF level logging.
   - 6-point visual walkaround inspection checklist (Hydraulics, Undercarriage/Tires, Cabin, Safety devices, Electrical).
   - Pre-existing damage photo logging & severity grading.
   - Digital inspector signature & PDF export generation.
 
-### 5. ⚡ Remote ECM Over-The-Air (OTA) Control Terminal
+### 5. Remote ECM Over-The-Air (OTA) Control Terminal
 * Force GPS Heartbeat refresh.
 * On-demand CAN-bus telemetry polling.
 * Remote ignition immobilization & lockout control.

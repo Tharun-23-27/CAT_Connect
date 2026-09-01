@@ -1,0 +1,277 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // Core Security & Authorization Helper Functions
+    // =========================================================================
+
+    // Checks if the request is from an authenticated Firebase user
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Safely checks if the user's profile document exists
+    function userProfileExists() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Retrieves the trusted UserProfile data for the authenticated user
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Checks if the user is active (not disabled)
+    function isActiveUser() {
+      return userProfileExists() && getUserProfile().isActive == true;
+    }
+
+    // Role check: Global Fleet Manager
+    function isFleetManager() {
+      return isActiveUser() && getUserProfile().role == 'FLEET_MANAGER';
+    }
+
+    // Role check: Site Supervisor
+    function isSiteSupervisor() {
+      return isActiveUser() && getUserProfile().role == 'SITE_SUPERVISOR';
+    }
+
+    // Role check: Equipment Operator
+    function isEquipmentOperator() {
+      return isActiveUser() && getUserProfile().role == 'EQUIPMENT_OPERATOR';
+    }
+
+    // Validates if the user has authorized access to a specific site
+    // Fleet Managers and wildcard '*' have universal access; others must have siteId in assignedSiteIds
+    function hasSiteAccess(siteId) {
+      return isFleetManager() ||
+        (isActiveUser() && (
+          getUserProfile().assignedSiteIds.hasAny(['*']) ||
+          getUserProfile().assignedSiteIds.hasAny([siteId])
+        ));
+    }
+
+    // Checks that specified fields are not modified during an update
+    function areFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // =========================================================================
+    // Collection: /users/{userId}
+    // Application User Profiles & Role Storage
+    // =========================================================================
+    match /users/{userId} {
+      // READ: Users can read their own profile; Fleet Managers can read all profiles
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isFleetManager());
+
+      // CREATE:
+      // - Fleet Managers can create profiles with any role.
+      // - Normal users can self-initialize ONLY with role 'EQUIPMENT_OPERATOR', empty assignedSiteIds, and matching UID.
+      allow create: if isAuthenticated() && (
+        isFleetManager() ||
+        (
+          request.auth.uid == userId &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.role == 'EQUIPMENT_OPERATOR' &&
+          request.resource.data.assignedSiteIds.size() == 0 &&
+          request.resource.data.isActive == true
+        )
+      );
+
+      // UPDATE:
+      // - Fleet Managers can update any user profile (including roles and site assignments).
+      // - Normal users can update ONLY safe personal fields (fullName, phone, badgeRfid).
+      //   Security invariant: userId, email, role, assignedSiteIds, and isActive are strictly IMMUTABLE for self-updates.
+      allow update: if isAuthenticated() && (
+        isFleetManager() ||
+        (
+          request.auth.uid == userId &&
+          isActiveUser() &&
+          areFieldsUnchanged(['userId', 'email', 'role', 'assignedSiteIds', 'isActive', 'createdAt'])
+        )
+      );
+
+      // DELETE: Only Fleet Managers can delete user profiles (or handled via Admin SDK)
+      allow delete: if isFleetManager();
+    }
+
+    // =========================================================================
+    // Collection: /sites/{siteId}
+    // Construction & Mining Worksites and Geofence Boundaries
+    // =========================================================================
+    match /sites/{siteId} {
+      // READ: Users with access to the site or Fleet Managers
+      allow read: if isAuthenticated() && (isFleetManager() || hasSiteAccess(siteId));
+
+      // CREATE, UPDATE, DELETE: Strictly restricted to Fleet Managers (or backend Admin SDK)
+      allow create: if isFleetManager();
+      allow update: if isFleetManager();
+      allow delete: if isFleetManager();
+    }
+
+    // =========================================================================
+    // Collection: /equipment/{equipmentId}
+    // Heavy Machinery Assets & Live Tracking Status
+    // =========================================================================
+    match /equipment/{equipmentId} {
+      // READ: Fleet Managers or users authorized for the equipment's current site
+      allow read: if isAuthenticated() && (
+        isFleetManager() ||
+        hasSiteAccess(resource.data.currentSiteId)
+      );
+
+      // CREATE: Fleet Managers can add new machinery assets
+      allow create: if isFleetManager();
+
+      // UPDATE:
+      // - Fleet Managers have full update privileges.
+      // - Cumulative engine/idle metrics and asset ID are protected from arbitrary client tampering.
+      allow update: if isAuthenticated() && (
+        isFleetManager() ||
+        (
+          hasSiteAccess(resource.data.currentSiteId) &&
+          areFieldsUnchanged([
+            'equipmentId',
+            'type',
+            'serialNumber',
+            'leaseStartDate',
+            'leaseEndDate',
+            'dailyRentalRateUsd',
+            'currentCumulativeEngineHours',
+            'currentCumulativeIdleHours',
+            'createdAt'
+          ])
+        )
+      );
+
+      // DELETE: Only Fleet Managers can decommission/delete equipment records
+      allow delete: if isFleetManager();
+    }
+
+    // =========================================================================
+    // Collection: /handoff_logs/{handoffId}
+    // Append-Only Physical Check-In / Check-Out Verification Logs
+    // =========================================================================
+    match /handoff_logs/{handoffId} {
+      // READ: Fleet Managers, or supervisors/operators authorized on the site
+      allow read: if isAuthenticated() && (
+        isFleetManager() ||
+        hasSiteAccess(resource.data.siteId)
+      );
+
+      // CREATE: Authenticated operators and supervisors logging check-in/out on their authorized site
+      allow create: if isAuthenticated() && isActiveUser() &&
+        request.resource.data.operatorId == request.auth.uid &&
+        hasSiteAccess(request.resource.data.siteId) &&
+        request.resource.data.handoffId == handoffId;
+
+      // UPDATE & DELETE: STRICTLY PROHIBITED (Append-only audit log)
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // Collection: /telemetry_logs/{telemetryId}
+    // High-Frequency Machine Telematics Time-Series Data
+    // =========================================================================
+    match /telemetry_logs/{telemetryId} {
+      // READ: Fleet Managers and Site Supervisors
+      allow read: if isAuthenticated() && (isFleetManager() || isSiteSupervisor());
+
+      // CREATE: STRICTLY PROHIBITED from direct browser clients.
+      // Ingested exclusively via Developer 2's backend M2M API using Firebase Admin SDK.
+      allow create: if false;
+
+      // UPDATE & DELETE: STRICTLY PROHIBITED (Immutable sensor telemetry log)
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // Collection: /daily_usage_summaries/{summaryId}
+    // Aggregated Daily Engine Hours, Idle Hours, and Fuel Reports
+    // =========================================================================
+    match /daily_usage_summaries/{summaryId} {
+      // READ: Fleet Managers or users with site access
+      allow read: if isAuthenticated() && (
+        isFleetManager() ||
+        hasSiteAccess(resource.data.siteId)
+      );
+
+      // CREATE, UPDATE, DELETE: STRICTLY PROHIBITED from direct browser clients.
+      // Computed and upserted exclusively by Developer 2's backend using Firebase Admin SDK.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // Collection: /alerts_queue/{alertId}
+    // System Alerts & Actionable Recommendation Queue
+    // =========================================================================
+    match /alerts_queue/{alertId} {
+      // READ: Fleet Managers or users with site access
+      allow read: if isAuthenticated() && (
+        isFleetManager() ||
+        hasSiteAccess(resource.data.siteId)
+      );
+
+      // CREATE: STRICTLY PROHIBITED from direct browser clients.
+      // Generated exclusively by Developer 2's backend evaluation engine using Firebase Admin SDK.
+      allow create: if false;
+
+      // UPDATE:
+      // - Fleet Managers and authorized Site Supervisors can acknowledge/resolve alerts.
+      // - Core alert definition fields (alertId, equipmentId, siteId, alertType, severity,
+      //   recommendedAction, recommendationReasoning, createdAt) are strictly IMMUTABLE.
+      allow update: if isAuthenticated() && (
+        isFleetManager() ||
+        (
+          isSiteSupervisor() &&
+          hasSiteAccess(resource.data.siteId) &&
+          areFieldsUnchanged([
+            'alertId',
+            'equipmentId',
+            'siteId',
+            'alertType',
+            'severity',
+            'title',
+            'description',
+            'recommendedAction',
+            'recommendationReasoning',
+            'createdAt'
+          ])
+        )
+      );
+
+      // DELETE: Only Fleet Managers can dismiss/delete alerts (or backend Admin SDK)
+      allow delete: if isFleetManager();
+    }
+
+    // =========================================================================
+    // Collection: /demand_forecasts/{forecastId}
+    // AI-Driven Equipment Demand Forecasts for Pre-Positioning
+    // =========================================================================
+    match /demand_forecasts/{forecastId} {
+      // READ: Fleet Managers or users with site access
+      allow read: if isAuthenticated() && (
+        isFleetManager() ||
+        hasSiteAccess(resource.data.siteId)
+      );
+
+      // CREATE, UPDATE, DELETE: STRICTLY PROHIBITED from direct browser clients.
+      // Calculated and published exclusively by Developer 2's backend forecasting engine using Firebase Admin SDK.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // Default Fallback: Deny all unmatched documents
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

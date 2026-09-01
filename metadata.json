@@ -1,0 +1,6 @@
+{
+  "name": "CAT_Connect",
+  "description": "Smart Heavy Equipment Rental Tracking and Recommendation Control Tower for construction and mining sites.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,445 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Application user profile linked to Firebase Auth UID with role-based permissions.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Firebase Authentication UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address."
+        },
+        "fullName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "User full name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["FLEET_MANAGER", "SITE_SUPERVISOR", "EQUIPMENT_OPERATOR"],
+          "description": "Assigned access control role."
+        },
+        "assignedSiteIds": {
+          "type": "array",
+          "description": "List of site IDs the user is permitted to supervise/operate."
+        },
+        "badgeRfid": {
+          "type": "string",
+          "description": "Optional physical/virtual RFID badge identifier."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Account active state."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile creation timestamp in ISO 8601."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile last update timestamp in ISO 8601."
+        }
+      },
+      "required": ["userId", "email", "fullName", "role", "assignedSiteIds", "isActive", "createdAt", "updatedAt"]
+    },
+    "Site": {
+      "title": "Site",
+      "description": "Construction or mining worksite location and circular geofence boundary.",
+      "type": "object",
+      "properties": {
+        "siteId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Unique site identifier."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Human-readable name of the project or site."
+        },
+        "siteType": {
+          "type": "string",
+          "enum": ["CONSTRUCTION", "MINING", "INFRASTRUCTURE"],
+          "description": "Classification of the worksite."
+        },
+        "geofence": {
+          "type": "object",
+          "description": "Circular geofence coordinates and boundary radius."
+        },
+        "supervisorUserIds": {
+          "type": "array",
+          "description": "User IDs of supervisors managing this site."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Active site status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["siteId", "name", "siteType", "geofence", "supervisorUserIds", "isActive", "createdAt", "updatedAt"]
+    },
+    "Equipment": {
+      "title": "Equipment",
+      "description": "Heavy machinery rental asset tracked across sites.",
+      "type": "object",
+      "properties": {
+        "equipmentId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Unique machine asset ID (e.g., EQ-CAT-336-042)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["EXCAVATOR", "CRANE", "BULLDOZER", "WHEEL_LOADER", "HAUL_TRUCK", "MOTOR_GRADER", "GENERATOR"],
+          "description": "Equipment category."
+        },
+        "makeModel": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Manufacturer model and name."
+        },
+        "serialNumber": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Manufacturer serial number."
+        },
+        "qrCodeTag": {
+          "type": "string",
+          "description": "QR code scanner string."
+        },
+        "rfidTag": {
+          "type": "string",
+          "description": "RFID tag identifier."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "IDLE", "OVERDUE", "UNKNOWN", "MAINTENANCE"],
+          "description": "Operational tracking status."
+        },
+        "currentSiteId": {
+          "type": "string",
+          "description": "Current assigned site ID."
+        },
+        "lastOperatorId": {
+          "type": "string",
+          "description": "User ID of the last operator who checked out or operated the asset."
+        },
+        "leaseStartDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "leaseEndDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expectedReturnDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dailyRentalRateUsd": {
+          "type": "number",
+          "description": "Daily rental charge in USD."
+        },
+        "currentCumulativeEngineHours": {
+          "type": "number",
+          "description": "Total accumulated engine running hours."
+        },
+        "currentCumulativeIdleHours": {
+          "type": "number",
+          "description": "Total accumulated machine idle hours."
+        },
+        "lastTelemetryTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastKnownLocation": {
+          "type": "object",
+          "description": "Latitude and longitude of last GPS telemetry report."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["equipmentId", "type", "makeModel", "serialNumber", "qrCodeTag", "rfidTag", "status", "currentSiteId", "leaseStartDate", "leaseEndDate", "expectedReturnDate", "dailyRentalRateUsd", "currentCumulativeEngineHours", "currentCumulativeIdleHours", "createdAt", "updatedAt"]
+    },
+    "HandoffLog": {
+      "title": "HandoffLog",
+      "description": "Physical handoff check-in and check-out verification log.",
+      "type": "object",
+      "properties": {
+        "handoffId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "siteId": {
+          "type": "string"
+        },
+        "operatorId": {
+          "type": "string"
+        },
+        "actionType": {
+          "type": "string",
+          "enum": ["CHECK_OUT", "CHECK_IN"]
+        },
+        "method": {
+          "type": "string",
+          "enum": ["QR_SCAN", "RFID_TAP", "MANUAL_ENTRY"]
+        },
+        "engineHoursAtHandoff": {
+          "type": "number"
+        },
+        "fuelLevelPercent": {
+          "type": "number"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["handoffId", "equipmentId", "siteId", "operatorId", "actionType", "method", "engineHoursAtHandoff", "fuelLevelPercent", "timestamp"]
+    },
+    "TelemetryLog": {
+      "title": "TelemetryLog",
+      "description": "Machine sensor and telematics data point.",
+      "type": "object",
+      "properties": {
+        "telemetryId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "engineHoursDelta": {
+          "type": "number"
+        },
+        "idleHoursDelta": {
+          "type": "number"
+        },
+        "fuelConsumedLiters": {
+          "type": "number"
+        },
+        "location": {
+          "type": "object"
+        },
+        "isInsideGeofence": {
+          "type": "boolean"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": ["telemetryId", "equipmentId", "timestamp", "engineHoursDelta", "idleHoursDelta", "fuelConsumedLiters", "location", "isInsideGeofence"]
+    },
+    "DailyUsageSummary": {
+      "title": "DailyUsageSummary",
+      "description": "Aggregated daily machine usage hours, fuel, and operating days.",
+      "type": "object",
+      "properties": {
+        "summaryId": {
+          "type": "string",
+          "description": "Formatted as equipmentId_YYYY-MM-DD"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "siteId": {
+          "type": "string"
+        },
+        "engineHoursDay": {
+          "type": "number"
+        },
+        "idleHoursDay": {
+          "type": "number"
+        },
+        "operatingDaysCount": {
+          "type": "number"
+        },
+        "fuelUsedDayLiters": {
+          "type": "number"
+        },
+        "lastOperatorId": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["summaryId", "equipmentId", "date", "siteId", "engineHoursDay", "idleHoursDay", "operatingDaysCount", "fuelUsedDayLiters", "updatedAt"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "System alert record and actionable recommendation queue item.",
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "equipmentId": {
+          "type": "string"
+        },
+        "siteId": {
+          "type": "string"
+        },
+        "alertType": {
+          "type": "string",
+          "enum": ["OVERDUE_RENTAL", "LOW_UTILIZATION", "GEOFENCE_BREACH", "EXCESSIVE_IDLE", "UNASSIGNED_RUNNING"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "description": {
+          "type": "string"
+        },
+        "recommendedAction": {
+          "type": "string",
+          "enum": ["RETURN_EARLY", "REASSIGN_SITE", "INVESTIGATE", "EXTEND_LEASE", "SCHEDULE_SERVICE"]
+        },
+        "recommendationReasoning": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "ACKNOWLEDGED", "RESOLVED", "DISMISSED"]
+        },
+        "resolvedByUserId": {
+          "type": "string"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["alertId", "equipmentId", "siteId", "alertType", "severity", "title", "description", "recommendedAction", "recommendationReasoning", "status", "createdAt", "updatedAt"]
+    },
+    "DemandForecast": {
+      "title": "DemandForecast",
+      "description": "Forecasted machinery demand by site and type for pre-positioning.",
+      "type": "object",
+      "properties": {
+        "forecastId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "siteId": {
+          "type": "string"
+        },
+        "equipmentType": {
+          "type": "string",
+          "enum": ["EXCAVATOR", "CRANE", "BULLDOZER", "WHEEL_LOADER", "HAUL_TRUCK", "MOTOR_GRADER", "GENERATOR"]
+        },
+        "periodStart": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "periodEnd": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "predictedUnitsRequired": {
+          "type": "number"
+        },
+        "currentAvailableUnits": {
+          "type": "number"
+        },
+        "recommendedPrePositionDelta": {
+          "type": "number"
+        },
+        "confidenceScore": {
+          "type": "number"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["forecastId", "siteId", "equipmentType", "periodStart", "periodEnd", "predictedUnitsRequired", "currentAvailableUnits", "recommendedPrePositionDelta", "confidenceScore", "generatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profiles, roles, and site permissions."
+    },
+    "/sites/{siteId}": {
+      "schema": "Site",
+      "description": "Stores worksite metadata and geofence definitions."
+    },
+    "/equipment/{equipmentId}": {
+      "schema": "Equipment",
+      "description": "Stores heavy equipment asset status, lease data, and cumulative runtime."
+    },
+    "/handoff_logs/{handoffId}": {
+      "schema": "HandoffLog",
+      "description": "Stores check-in and check-out handoff verification records."
+    },
+    "/telemetry_logs/{telemetryId}": {
+      "schema": "TelemetryLog",
+      "description": "Stores ingested time-series machine telemetry events."
+    },
+    "/daily_usage_summaries/{summaryId}": {
+      "schema": "DailyUsageSummary",
+      "description": "Stores aggregated daily engine hours, idle hours, and fuel consumption per asset."
+    },
+    "/alerts_queue/{alertId}": {
+      "schema": "Alert",
+      "description": "Stores active and resolved alerts with recommended actions."
+    },
+    "/demand_forecasts/{forecastId}": {
+      "schema": "DemandForecast",
+      "description": "Stores demand forecast projections for pre-positioning heavy machinery."
+    }
+  }
+}

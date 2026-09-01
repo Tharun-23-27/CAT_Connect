@@ -1,0 +1,8 @@
+{
+  "name": "CAT_Connect",
+  "description": "Smart rental telematics and fleet tracking console with real-time CAN-bus data, check-in/out management, rules engine, and Gemini-powered predictive intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
